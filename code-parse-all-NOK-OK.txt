@@ -1,0 +1,62 @@
+import requests
+import re
+import json
+from datetime import datetime, timedelta
+
+# URL сайта
+url = "https://airkaz.org/"
+
+# Выполняем GET-запрос к сайту
+response = requests.get(url)
+
+# Проверяем успешность запроса
+if response.status_code == 200:
+    # Ищем переменную sensors_data в HTML-коде страницы
+    match = re.search(r'var sensors_data = (.*?);', response.text, re.DOTALL)
+
+    if match:
+        # Извлекаем строку с данными
+        sensors_data_json = match.group(1).strip()
+
+        # Пытаемся загрузить как JSON
+        try:
+            sensors_data = json.loads(sensors_data_json)
+        except json.JSONDecodeError as e:
+            print("Ошибка при разборе JSON:", e)
+            # Если ошибка, обрезаем лишние данные
+            last_bracket_pos = sensors_data_json.rfind('}]')
+            cleaned_json = sensors_data_json[:last_bracket_pos + 2]
+            try:
+                sensors_data = json.loads(cleaned_json)
+            except json.JSONDecodeError as e:
+                print("Ошибка при разборе JSON после очистки:", e)
+                sensors_data = None
+
+        if sensors_data:
+            # Словарь для хранения последних значений по (город, название)
+            latest_data = {}
+            current_time = datetime.now()
+
+            for sensor in sensors_data:
+                key = (sensor['city'], sensor['name'])
+                sensor_time = datetime.strptime(sensor['date'], '%Y-%m-%d %H:%M:%S')
+                # Проверка времени обновления
+                if current_time - sensor_time > timedelta(hours=3):
+                    status = 'NOK'
+                else:
+                    status = 'OK'
+                
+                sensor['status'] = status  # Добавляем статус к данным сенсора
+                latest_data[key] = sensor  # Сохраняем только последнее значение
+
+            # Выводим сгруппированные данные
+            for (city, name), sensor in latest_data.items():
+                print(f"Город: {city}, Название: {name}")
+                print(f"  Данные: {sensor}")
+                print()  # Печатаем пустую строку между записями
+        else:
+            print("Данные сенсоров не были загружены.")
+    else:
+        print("Не удалось найти переменную sensors_data.")
+else:
+    print(f"Ошибка при запросе: {response.status_code}")
