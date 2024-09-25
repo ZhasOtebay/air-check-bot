@@ -11,7 +11,7 @@ import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
-TELEGRAM_TOKEN = '7455257655:AAHI3Ay-KZgaAYujOB71cjLf09mvHaBJXkY'
+TELEGRAM_TOKEN = 
 
 CITIES = {
     'Астана': 'astana.php',
